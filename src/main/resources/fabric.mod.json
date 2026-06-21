@@ -1,0 +1,19 @@
+{
+    "schemaVersion": 1,
+    "id": "adminpro",
+    "version": "${version}",
+    "name": "AdminPro",
+    "description": "Advanced player management tool - management panel, reward library, ban system",
+    "authors": ["AdminPro Team"],
+    "contact": {},
+    "license": "MIT",
+    "environment": "server",
+    "entrypoints": {
+        "main": ["com.adminpro.AdminPro"]
+    },
+    "depends": {
+        "fabricloader": ">=0.15.0",
+        "minecraft": ">=1.21",
+        "fabric-api": "*"
+    }
+}
