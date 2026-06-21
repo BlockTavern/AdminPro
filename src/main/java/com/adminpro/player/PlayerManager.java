@@ -22,11 +22,20 @@ public class PlayerManager {
 
     static {
         try {
-            PACKET_ENTRIES_FIELD = PlayerListS2CPacket.class.getDeclaredField("entries");
-            PACKET_ENTRIES_FIELD.setAccessible(true);
-        } catch (NoSuchFieldException e) {
-            throw new RuntimeException("Failed to access PlayerListS2CPacket.entries field", e);
+            PACKET_ENTRIES_FIELD = findEntriesField();
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to access PlayerListS2CPacket entries field", e);
         }
+    }
+
+    private static Field findEntriesField() throws NoSuchFieldException {
+        for (Field field : PlayerListS2CPacket.class.getDeclaredFields()) {
+            if (List.class.isAssignableFrom(field.getType())) {
+                field.setAccessible(true);
+                return field;
+            }
+        }
+        throw new NoSuchFieldException("No List field found in PlayerListS2CPacket");
     }
 
     private static PlayerManager instance;
