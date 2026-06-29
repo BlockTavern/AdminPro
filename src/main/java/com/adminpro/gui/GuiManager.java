@@ -337,6 +337,10 @@ public class GuiManager {
                     if (s == 53) { openPlayerDetail(p, sess.target); return true; }
                     return false;
                 });
+
+        if (admin.currentScreenHandler instanceof AdminScreenHandler ash) {
+            ash.setTargetPlayer(target);
+        }
     }
 
     // ==================== GIVE SELECT ====================
@@ -433,6 +437,11 @@ public class GuiManager {
                     }
                     return false;
                 });
+
+        // Sync tempInventory with actual screen handler inventory (handles screen reuse)
+        if (admin.currentScreenHandler instanceof AdminScreenHandler ash) {
+            session.tempInventory = ash.getInventory();
+        }
     }
 
     // ==================== QUANTITY SELECT ====================
@@ -634,6 +643,11 @@ public class GuiManager {
                     }
                     return s >= 18 && s < 27;
                 });
+
+        // Sync tempInventory with actual screen handler inventory (handles screen reuse)
+        if (admin.currentScreenHandler instanceof AdminScreenHandler ash) {
+            session.tempInventory = ash.getInventory();
+        }
     }
 
     // ==================== BAN LIST ====================
@@ -900,6 +914,7 @@ public class GuiManager {
         if (player.currentScreenHandler instanceof AdminScreenHandler ash
                 && ash.syncId == player.currentScreenHandler.syncId
                 && newInventory.size() == ash.getInventory().size()) {
+            ash.setTargetPlayer(null);
             SimpleInventory existing = ash.getInventory();
             existing.clear();
             for (int i = 0; i < newInventory.size(); i++) {
