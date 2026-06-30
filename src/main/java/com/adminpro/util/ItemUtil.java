@@ -58,7 +58,12 @@ public class ItemUtil {
         return stack;
     }
 
-    public static boolean isBorderOrFiller(ItemStack stack) { return stack != null && !stack.isEmpty() && (stack.getItem() == Items.BLACK_STAINED_GLASS_PANE || stack.getItem() == Items.GRAY_STAINED_GLASS_PANE); }
+    public static boolean isBorderOrFiller(ItemStack stack) {
+        if (stack == null || stack.isEmpty()) return false;
+        if (stack.getItem() == Items.BLACK_STAINED_GLASS_PANE || stack.getItem() == Items.GRAY_STAINED_GLASS_PANE || stack.getItem() == Items.LIGHT_GRAY_STAINED_GLASS_PANE) return true;
+        if (stack.contains(DataComponentTypes.HIDE_TOOLTIP)) return true;
+        return false;
+    }
 
     public static boolean isFiller(ItemStack stack) {
         return stack != null && !stack.isEmpty() && stack.getItem() == Items.GRAY_STAINED_GLASS_PANE;

@@ -101,8 +101,11 @@ public class AdminScreenHandler extends ScreenHandler {
             if (ItemUtil.isBorderOrFiller(stack)) return;
             if (player instanceof ServerPlayerEntity sp) {
                 var session = GuiManager.getSession(sp);
-                if (session != null && session.handler != null && session.handler.apply(sp, slotIndex)) {
-                    return;
+                if (session != null && session.handler != null) {
+                    session.currentButton = button;
+                    if (session.handler.apply(sp, slotIndex)) {
+                        return;
+                    }
                 }
             }
         }

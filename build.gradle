@@ -4,7 +4,7 @@ plugins {
 }
 
 group = 'com.adminpro'
-version = '1.8.3'
+version = '1.14.0'
 
 base {
     archivesName = 'AdminPro'
