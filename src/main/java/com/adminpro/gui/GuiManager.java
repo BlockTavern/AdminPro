@@ -37,6 +37,7 @@ public class GuiManager {
         public Object extraData;
         public BiFunction<ServerPlayerEntity, Integer, Boolean> handler;
         public int currentButton;
+        public Runnable onClose;
 
         public GuiSession(GuiType type, ServerPlayerEntity admin) {
             this.type = type;
@@ -183,7 +184,7 @@ public class GuiManager {
         sessions.put(admin.getUuid(), session);
 
         int finalPage = page;
-        openGUI(admin, inv, 6, Text.literal("§8管理面板"),
+        openGUI(admin, inv, 6, Text.literal("§8管理面板 - 第" + (page + 1) + "页"),
                 (p, s) -> { handleMainPanelClick(p, s, finalPage); return true; });
     }
 
@@ -334,7 +335,7 @@ public class GuiManager {
                 Text.literal("§7世界: §f" + target.getServerWorld().getRegistryKey().getValue().toString())
         )));
         inv.setStack(36, playerInfo);
-        inv.setStack(44, ItemUtil.createButton(new ItemStack(Items.ARROW), "§7返回"));
+        inv.setStack(53, ItemUtil.createButton(new ItemStack(Items.ARROW), "§7返回"));
 
         GuiSession session = new GuiSession(GuiType.PLAYER_DETAIL, admin);
         session.target = target;
@@ -403,7 +404,7 @@ public class GuiManager {
                 }
             }
             case 24 -> openGameModeSelect(admin, target);
-            case 44 -> openMainPanel(admin);
+            case 53 -> openMainPanel(admin);
         }
     }
 
@@ -462,7 +463,7 @@ public class GuiManager {
                 (current == GameMode.SPECTATOR ? "§a§l" : "§6") + "旁观模式",
                 List.of(Text.literal("§7切换到旁观模式" + (current == GameMode.SPECTATOR ? " §8(当前)" : "")))));
 
-        inv.setStack(44, ItemUtil.createButton(new ItemStack(Items.ARROW), "§7返回"));
+        inv.setStack(53, ItemUtil.createButton(new ItemStack(Items.ARROW), "§7返回"));
 
         GuiSession session = new GuiSession(GuiType.GAME_MODE_SELECT, admin);
         session.target = target;
@@ -472,7 +473,7 @@ public class GuiManager {
                 (p, s) -> {
                     GuiSession sess = getSession(p);
                     if (sess == null || sess.target == null) return true;
-                    if (s == 44) { openPlayerDetail(p, sess.target); return true; }
+                    if (s == 53) { openPlayerDetail(p, sess.target); return true; }
                     GameMode mode = null;
                     if (s == 10) mode = GameMode.SURVIVAL;
                     else if (s == 12) mode = GameMode.CREATIVE;
@@ -514,23 +515,39 @@ public class GuiManager {
 
     public static void openViewInventory(ServerPlayerEntity admin, ServerPlayerEntity target) {
         SimpleInventory inv = new SimpleInventory(54);
-        for (int i = 0; i < 36; i++) {
-            ItemStack stack = target.getInventory().getStack(i);
-            if (!stack.isEmpty()) inv.setStack(i, stack.copy());
-        }
-        ItemStack offhand = target.getOffHandStack();
-        if (!offhand.isEmpty()) inv.setStack(36, offhand.copy());
 
-        int armorSlot = 45;
-        ItemStack[] armor = new ItemStack[]{
+        for (int row = 0; row < 3; row++) {
+            for (int col = 0; col < 9; col++) {
+                int guiSlot = row * 9 + col;
+                int mcSlot = 9 + row * 9 + col;
+                ItemStack stack = target.getInventory().getStack(mcSlot);
+                if (!stack.isEmpty()) inv.setStack(guiSlot, stack.copy());
+            }
+        }
+
+        for (int col = 0; col < 9; col++) {
+            int guiSlot = 27 + col;
+            int mcSlot = col;
+            ItemStack stack = target.getInventory().getStack(mcSlot);
+            if (!stack.isEmpty()) inv.setStack(guiSlot, stack.copy());
+        }
+
+        ItemStack[] armor = {
                 target.getInventory().getArmorStack(3),
                 target.getInventory().getArmorStack(2),
                 target.getInventory().getArmorStack(1),
                 target.getInventory().getArmorStack(0)
         };
         for (int i = 0; i < 4; i++) {
-            if (!armor[i].isEmpty()) inv.setStack(armorSlot + i, armor[i].copy());
+            if (!armor[i].isEmpty()) inv.setStack(36 + i, armor[i].copy());
         }
+
+        for (int i = 41; i <= 43; i++) inv.setStack(i, ItemUtil.createBorder());
+
+        ItemStack offhand = target.getOffHandStack();
+        if (!offhand.isEmpty()) inv.setStack(44, offhand.copy());
+
+        for (int i = 45; i < 53; i++) inv.setStack(i, lightGlass());
         inv.setStack(53, ItemUtil.createButton(new ItemStack(Items.ARROW), "§7返回"));
 
         GuiSession session = new GuiSession(GuiType.VIEW_INVENTORY, admin);
@@ -590,7 +607,7 @@ public class GuiManager {
         inv.setStack(24, ItemUtil.createButton(new ItemStack(Items.ENDER_CHEST), "§6广播发放",
                 List.of(Text.literal("§7给当前所有在线玩家发放物品"))));
 
-        inv.setStack(44, ItemUtil.createButton(new ItemStack(Items.ARROW), "§7返回"));
+        inv.setStack(53, ItemUtil.createButton(new ItemStack(Items.ARROW), "§7返回"));
 
         GuiSession session = new GuiSession(GuiType.GIVE_SELECT, admin);
         session.target = target;
@@ -601,14 +618,14 @@ public class GuiManager {
                     GuiSession sess = getSession(p);
                     if (sess == null) return true;
                     if (sess.target == null) {
-                        if (s == 44) { openMainPanel(p); return true; }
+                        if (s == 53) { openMainPanel(p); return true; }
                         if (s == 24) { openBroadcastGive(p, 0); return true; }
                         return true;
                     }
                     if (s == 20) openGiveFromInventory(p, sess.target);
                     else if (s == 22) openGiveFromReward(p, sess.target, 0);
                     else if (s == 24) { openBroadcastGive(p, 0); return true; }
-                    else if (s == 44) openPlayerDetail(p, sess.target);
+                    else if (s == 53) openPlayerDetail(p, sess.target);
                     return true;
                 });
     }
@@ -715,7 +732,7 @@ public class GuiManager {
                     List.of(Text.literal("§7发放 " + a + " 个"))));
         }
 
-        inv.setStack(44, ItemUtil.createButton(new ItemStack(Items.ARROW), "§7返回"));
+        inv.setStack(53, ItemUtil.createButton(new ItemStack(Items.ARROW), "§7返回"));
 
         GuiSession session = new GuiSession(GuiType.QUANTITY_SELECT, admin);
         session.target = target;
@@ -726,7 +743,7 @@ public class GuiManager {
                 (p, s) -> {
                     GuiSession sess = getSession(p);
                     if (sess == null) return true;
-                    if (s == 44) { openGiveFromReward(p, sess.target, 0); return true; }
+                    if (s == 53) { openGiveFromReward(p, sess.target, 0); return true; }
                     if (s >= 19 && s < 19 + amounts.length) {
                         int idx = s - 19;
                         RewardItem reward = RewardManager.getInstance().getReward(sess.slotIndex);
@@ -786,7 +803,7 @@ public class GuiManager {
 
         if (page > 0) inv.setStack(45, ItemUtil.createButton(new ItemStack(Items.ARROW), "§7上一页"));
         if (page < totalPages - 1) inv.setStack(46, ItemUtil.createButton(new ItemStack(Items.ARROW), "§7下一页"));
-        inv.setStack(44, ItemUtil.createButton(new ItemStack(Items.ARROW), "§7返回"));
+        inv.setStack(53, ItemUtil.createButton(new ItemStack(Items.ARROW), "§7返回"));
 
         GuiSession session = new GuiSession(GuiType.GIVE_FROM_REWARD, admin);
         session.target = target;
@@ -799,7 +816,7 @@ public class GuiManager {
                     if (sess == null) return true;
                     if (s == 45 && page > 0) openGiveFromReward(p, sess.target, page - 1);
                     else if (s == 46 && page < totalPages - 1) openGiveFromReward(p, sess.target, page + 1);
-                    else if (s == 44) openGiveSelect(p, sess.target);
+                    else if (s == 53) openGiveSelect(p, sess.target);
                     else if (s >= 9 && s < 9 + maxSlots) {
                         int rewardIndex = startIndex + (s - 9);
                         if (rewardIndex < rewards.size()) {
@@ -814,20 +831,28 @@ public class GuiManager {
     // 布局: 6行大箱子 (54格)
     //
     // Row 0: [边框] [边框] [边框] [边框] [边框] [边框] [边框] [边框] [边框]
-    // Row 1: [奖励物品] [奖励物品] [奖励物品] [奖励物品] [奖励物品] [奖励物品] [奖励物品] [奖励物品] [奖励物品]
-    // Row 2: [奖励物品] [奖励物品] [奖励物品] [奖励物品] [奖励物品] [奖励物品] [奖励物品] [奖励物品] [奖励物品]
-    // Row 3: [奖励物品] [奖励物品] [奖励物品] [奖励物品] [奖励物品] [奖励物品] [奖励物品] [奖励物品] [奖励物品]
-    // Row 4: [奖励物品] [奖励物品] [奖励物品] [奖励物品] [返回] [奖励物品] [新建奖励] [奖励物品] [奖励物品]
+    // Row 1: [物品] [白玻] [物品] [白玻] [物品] [白玻] [物品] [白玻] [物品]
+    // Row 2: [白玻] [物品] [白玻] [物品] [白玻] [物品] [白玻] [物品] [白玻]
+    // Row 3: [物品] [白玻] [物品] [白玻] [物品] [白玻] [物品] [白玻] [物品]
+    // Row 4: [白玻] [物品] [白玻] [物品] [返回] [白玻] [新建奖励] [白玻] [物品]
     // Row 5: [上一页] [下一页] [边框] [边框] [边框] [边框] [边框] [边框] [边框]
     //
-    // 操作: 左键奖励物品 → 正常操作(拖动/拿出/放入/移动)
-    //       右键奖励物品 → 删除该奖励
+    // 操作: 左键 → 正常操作(拖动/拿出/放入/移动/换位)
+    //       右键 → 删除该奖励
+    //       操作后自动同步奖励库顺序
     //       新建奖励 → 进入新建奖励面板
     //       上一页/下一页 → 翻页浏览
     //       返回 → 回到主面板
 
     public static void openRewardLibrary(ServerPlayerEntity admin) {
         openRewardLibrary(admin, 0);
+    }
+
+    private static ItemStack whiteGlass() {
+        ItemStack stack = new ItemStack(Items.WHITE_STAINED_GLASS_PANE);
+        stack.set(DataComponentTypes.CUSTOM_NAME, Text.literal(" "));
+        stack.set(DataComponentTypes.HIDE_TOOLTIP, net.minecraft.util.Unit.INSTANCE);
+        return stack;
     }
 
     public static void openRewardLibrary(ServerPlayerEntity admin, int page) {
@@ -840,40 +865,43 @@ public class GuiManager {
         for (int i = 0; i < 9; i++) inv.setStack(i, ItemUtil.createBorder());
         for (int i = 45; i < 54; i++) inv.setStack(i, ItemUtil.createBorder());
 
-        for (int i = 0; i < maxSlots && (startIndex + i) < rewards.size(); i++) {
-            RewardItem reward = rewards.get(startIndex + i);
-            ItemStack display = reward.getItem().copy();
-            display.setCount(1);
-            Text name = reward.getDisplayName() != null
-                    ? Text.literal("§e" + reward.getDisplayName())
-                    : Text.literal("§e" + display.getItem().getName().getString());
-            display.set(DataComponentTypes.CUSTOM_NAME, name);
-            inv.setStack(9 + i, display);
+        for (int i = 0; i < maxSlots; i++) {
+            int rewardIndex = startIndex + i;
+            if (rewardIndex < rewards.size()) {
+                RewardItem reward = rewards.get(rewardIndex);
+                ItemStack display = reward.getItem().copy();
+                display.setCount(1);
+                inv.setStack(9 + i, display);
+            }
         }
 
         if (page > 0) inv.setStack(45, ItemUtil.createButton(new ItemStack(Items.ARROW), "§7上一页"));
         if (page < totalPages - 1) inv.setStack(46, ItemUtil.createButton(new ItemStack(Items.ARROW), "§7下一页"));
         inv.setStack(47, ItemUtil.createButton(new ItemStack(Items.ANVIL), "§b新建奖励",
                 List.of(Text.literal("§7创建新的奖励物品"))));
-        inv.setStack(44, ItemUtil.createButton(new ItemStack(Items.ARROW), "§7返回"));
+        inv.setStack(53, ItemUtil.createButton(new ItemStack(Items.ARROW), "§7返回"));
 
         GuiSession session = new GuiSession(GuiType.REWARD_LIBRARY, admin);
         session.slotIndex = page;
+        session.onClose = () -> syncRewardsFromGUI(admin, startIndex, maxSlots);
         sessions.put(admin.getUuid(), session);
 
         openGUI(admin, inv, 6, Text.literal("§8奖励库管理 - 第" + (page + 1) + "页"),
                 (p, s) -> {
                     GuiSession sess = getSession(p);
                     if (sess == null) return true;
-                    if (s == 44) { openMainPanel(p); return true; }
-                    if (s == 47) { openAddReward(p); return true; }
-                    if (s == 45 && page > 0) { openRewardLibrary(p, page - 1); return true; }
-                    if (s == 46 && page < totalPages - 1) { openRewardLibrary(p, page + 1); return true; }
-                    int rewardSlot = startIndex + (s - 9);
-                    if (s >= 9 && s < 9 + maxSlots && rewardSlot >= 0 && rewardSlot < rewards.size()) {
+                    if (s == 53) { syncRewardsFromGUI(p, startIndex, maxSlots); openMainPanel(p); return true; }
+                    if (s == 47) { syncRewardsFromGUI(p, startIndex, maxSlots); openAddReward(p); return true; }
+                    if (s == 45 && page > 0) { syncRewardsFromGUI(p, startIndex, maxSlots); openRewardLibrary(p, page - 1); return true; }
+                    if (s == 46 && page < totalPages - 1) { syncRewardsFromGUI(p, startIndex, maxSlots); openRewardLibrary(p, page + 1); return true; }
+                    if (s >= 9 && s < 45) {
                         if (sess.currentButton == 1) {
-                            RewardManager.getInstance().removeReward(rewardSlot);
-                            MessageUtil.send(p, "§c已移除奖励物品");
+                            syncRewardsFromGUI(p, startIndex, maxSlots);
+                            int rewardIndex = startIndex + (s - 9);
+                            if (rewardIndex < RewardManager.getInstance().getAllRewards().size()) {
+                                RewardManager.getInstance().removeReward(rewardIndex);
+                                MessageUtil.send(p, "§c已移除奖励物品");
+                            }
                             openRewardLibrary(p, page);
                             return true;
                         }
@@ -881,6 +909,30 @@ public class GuiManager {
                     }
                     return true;
                 });
+    }
+
+    private static void syncRewardsFromGUI(ServerPlayerEntity admin, int startIndex, int maxSlots) {
+        if (!(admin.currentScreenHandler instanceof AdminScreenHandler ash)) return;
+        SimpleInventory inv = ash.getInventory();
+        List<RewardItem> currentRewards = RewardManager.getInstance().getAllRewards();
+        List<RewardItem> newRewards = new ArrayList<>();
+        for (int i = 0; i < startIndex && i < currentRewards.size(); i++) {
+            newRewards.add(currentRewards.get(i));
+        }
+        for (int i = 0; i < maxSlots; i++) {
+            int slot = 9 + i;
+            ItemStack stack = inv.getStack(slot);
+            if (!stack.isEmpty() && !ItemUtil.isBorderOrFiller(stack)) {
+                String name = stack.get(DataComponentTypes.CUSTOM_NAME) instanceof Text t
+                        ? t.getString() : stack.getItem().getName().getString();
+                newRewards.add(new RewardItem(UUID.randomUUID().toString().replace("-", ""), stack.copy(), name, "", System.currentTimeMillis()));
+            }
+        }
+        int pageEnd = startIndex + maxSlots;
+        for (int i = pageEnd; i < currentRewards.size(); i++) {
+            newRewards.add(currentRewards.get(i));
+        }
+        RewardManager.getInstance().replaceAll(newRewards);
     }
 
     // ==================== ADD REWARD (新建奖励) ====================
@@ -919,7 +971,7 @@ public class GuiManager {
         inv.setStack(41, lightGlass());
         inv.setStack(42, lightGlass());
         inv.setStack(43, lightGlass());
-        inv.setStack(44, ItemUtil.createButton(new ItemStack(Items.ARROW), "§7返回"));
+        inv.setStack(53, ItemUtil.createButton(new ItemStack(Items.ARROW), "§7返回"));
 
         GuiSession session = new GuiSession(GuiType.ADD_REWARD, admin);
         session.tempInventory = inv;
@@ -929,7 +981,7 @@ public class GuiManager {
                 (p, s) -> {
                     GuiSession sess = getSession(p);
                     if (sess == null) return true;
-                    if (s == 44) { openRewardLibrary(p); return true; }
+                    if (s == 53) { openRewardLibrary(p); return true; }
                     if (s == 40) {
                         for (int i = 9; i < 36; i++) sess.tempInventory.setStack(i, ItemStack.EMPTY);
                         MessageUtil.send(p, "§7已清空");
@@ -1227,7 +1279,7 @@ public class GuiManager {
             inv.setStack(19 + i, ItemUtil.createButton(new ItemStack(Items.CHEST), "§e×" + a,
                     List.of(Text.literal("§7每人发放 " + a + " 个"))));
         }
-        inv.setStack(44, ItemUtil.createButton(new ItemStack(Items.ARROW), "§7返回"));
+        inv.setStack(53, ItemUtil.createButton(new ItemStack(Items.ARROW), "§7返回"));
 
         GuiSession session = new GuiSession(GuiType.QUANTITY_SELECT, admin);
         session.slotIndex = rewardIndex;
@@ -1237,7 +1289,7 @@ public class GuiManager {
                 (p, s) -> {
                     GuiSession sess = getSession(p);
                     if (sess == null) return true;
-                    if (s == 44) { openBroadcastGive(p, 0); return true; }
+                    if (s == 53) { openBroadcastGive(p, 0); return true; }
                     if (s >= 19 && s < 19 + amounts.length) {
                         int idx = s - 19;
                         RewardItem reward = RewardManager.getInstance().getReward(sess.slotIndex);
@@ -1289,6 +1341,7 @@ public class GuiManager {
             for (int i = 0; i < newInventory.size(); i++) {
                 existing.setStack(i, newInventory.getStack(i));
             }
+            session.tempInventory = existing;
             return;
         }
 

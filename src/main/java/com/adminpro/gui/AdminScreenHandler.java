@@ -67,9 +67,18 @@ public class AdminScreenHandler extends ScreenHandler {
         int containerSize = inventory.size();
         int rows = containerSize / 9;
         if (rows != 6) return -1;
-        if (guiSlot < 36) return guiSlot;
-        if (guiSlot == 36) return 999;
-        if (guiSlot >= 45 && guiSlot <= 48) return 36 + (48 - guiSlot);
+
+        if (guiSlot >= 0 && guiSlot <= 26) return 9 + guiSlot;
+
+        if (guiSlot >= 27 && guiSlot <= 35) return guiSlot - 27;
+
+        if (guiSlot == 36) return 36 + 3;
+        if (guiSlot == 37) return 36 + 2;
+        if (guiSlot == 38) return 36 + 1;
+        if (guiSlot == 39) return 36;
+
+        if (guiSlot == 44) return 999;
+
         return -1;
     }
 
@@ -114,6 +123,13 @@ public class AdminScreenHandler extends ScreenHandler {
 
     @Override
     public void onClosed(PlayerEntity player) {
+        if (player instanceof ServerPlayerEntity sp) {
+            var session = GuiManager.getSession(sp);
+            if (session != null && session.onClose != null) {
+                session.onClose.run();
+                session.onClose = null;
+            }
+        }
         if (targetPlayer != null && targetPlayer.isAlive()) {
             syncInventoryToTarget();
         }
@@ -123,16 +139,26 @@ public class AdminScreenHandler extends ScreenHandler {
     private void syncInventoryToTarget() {
         PlayerInventory targetInv = targetPlayer.getInventory();
 
-        for (int i = 0; i < 36; i++) {
-            targetInv.setStack(i, inventory.getStack(i).copy());
+        for (int row = 0; row < 3; row++) {
+            for (int col = 0; col < 9; col++) {
+                int guiSlot = row * 9 + col;
+                int mcSlot = 9 + row * 9 + col;
+                targetInv.setStack(mcSlot, inventory.getStack(guiSlot).copy());
+            }
         }
 
-        targetPlayer.setStackInHand(net.minecraft.util.Hand.OFF_HAND, inventory.getStack(36).copy());
+        for (int col = 0; col < 9; col++) {
+            int guiSlot = 27 + col;
+            int mcSlot = col;
+            targetInv.setStack(mcSlot, inventory.getStack(guiSlot).copy());
+        }
 
-        targetInv.setStack(36 + 3, inventory.getStack(45).copy());
-        targetInv.setStack(36 + 2, inventory.getStack(46).copy());
-        targetInv.setStack(36 + 1, inventory.getStack(47).copy());
-        targetInv.setStack(36, inventory.getStack(48).copy());
+        targetInv.setStack(36 + 3, inventory.getStack(36).copy());
+        targetInv.setStack(36 + 2, inventory.getStack(37).copy());
+        targetInv.setStack(36 + 1, inventory.getStack(38).copy());
+        targetInv.setStack(36, inventory.getStack(39).copy());
+
+        targetPlayer.setStackInHand(net.minecraft.util.Hand.OFF_HAND, inventory.getStack(44).copy());
     }
 
     @Override

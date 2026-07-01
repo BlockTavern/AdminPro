@@ -95,6 +95,12 @@ public class RewardManager {
         }
     }
 
+    public void replaceAll(List<RewardItem> newRewards) {
+        rewards.clear();
+        rewards.addAll(newRewards);
+        save();
+    }
+
     public RewardItem getReward(String id) {
         return rewards.stream().filter(r -> r.getId().equals(id)).findFirst().orElse(null);
     }
